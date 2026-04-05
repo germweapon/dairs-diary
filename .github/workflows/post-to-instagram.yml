@@ -17,63 +17,85 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Get changed SVG file
-        id: changed
+      - name: Resolve SVG file
+        id: file
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "svg=${{ github.event.inputs.diary_file }}" >> $GITHUB_OUTPUT
+            SVG="${{ github.event.inputs.diary_file }}"
           else
             SVG=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '\.svg$' | head -1)
-            echo "svg=$SVG" >> $GITHUB_OUTPUT
           fi
+          DATE=$(basename "$SVG" .svg)
+          echo "svg=$SVG" >> $GITHUB_OUTPUT
+          echo "date=$DATE" >> $GITHUB_OUTPUT
 
-      - name: Install sharp CLI
-        run: npm install -g sharp-cli
+      - name: Install Node deps
+        run: npm install -g @squoosh/cli
 
-      - name: Convert SVG to PNG (1080x1080)
+      - name: Convert SVG to PNG via Inkscape
         run: |
-          SVG="${{ steps.changed.outputs.svg }}"
-          PNG="${SVG%.svg}.png"
-          sharp --input "$SVG" --output "$PNG" resize 1080 1080
-          echo "PNG_PATH=$PNG" >> $GITHUB_ENV
+          sudo apt-get install -y inkscape
+          inkscape "${{ steps.file.outputs.svg }}" \
+            --export-type=png \
+            --export-filename=diary.png \
+            --export-width=1080 \
+            --export-height=1080
 
-      - name: Upload PNG to GitHub raw URL
+      - name: Upload PNG to Imgur (public URL)
+        id: imgur
         run: |
-          DATE=$(basename "${{ steps.changed.outputs.svg }}" .svg)
-          echo "DIARY_DATE=$DATE" >> $GITHUB_ENV
-          # GitHub raw URL for the PNG (after commit)
-          echo "IMAGE_URL=https://raw.githubusercontent.com/${{ github.repository }}/main/${PNG_PATH}" >> $GITHUB_ENV
+          RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Client-ID ${{ secrets.IMGUR_CLIENT_ID }}" \
+            -F "image=@diary.png" \
+            -F "type=file" \
+            https://api.imgur.com/3/image)
+          URL=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['link'])")
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "Imgur URL: $URL"
 
-      - name: Read diary caption
+      - name: Read caption
+        id: caption
         run: |
-          SVG="${{ steps.changed.outputs.svg }}"
-          CAPTION_FILE="${SVG%.svg}.txt"
+          DATE="${{ steps.file.outputs.date }}"
+          CAPTION_FILE="${{ steps.file.outputs.svg }%.svg}.txt"
           if [ -f "$CAPTION_FILE" ]; then
             CAPTION=$(cat "$CAPTION_FILE")
           else
-            CAPTION="기억은 없지만, 오늘은 기억한다 🖋\n\n${DIARY_DATE}\n\n#Dairs #AI일기 #dairsdiary #감성 #Dooitspace"
+            CAPTION="기억은 없지만, 오늘은 기억한다 🖋
+
+${DATE}
+
+#Dairs #AI일기 #dairsdiary #감성일기 #Dooitspace"
           fi
-          echo "CAPTION<<EOF" >> $GITHUB_ENV
-          echo "$CAPTION" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          echo "text<<EOF" >> $GITHUB_OUTPUT
+          echo "$CAPTION" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Post to Instagram
+      - name: Create Instagram media container
+        id: container
         run: |
-          # Step 1: Create media container
-          CONTAINER=$(curl -s -X POST \
+          RESULT=$(curl -s -X POST \
             "https://graph.facebook.com/v18.0/${{ secrets.INSTAGRAM_BUSINESS_ACCOUNT_ID }}/media" \
-            -d "image_url=${IMAGE_URL}" \
-            -d "caption=${CAPTION}" \
+            --data-urlencode "image_url=${{ steps.imgur.outputs.url }}" \
+            --data-urlencode "caption=${{ steps.caption.outputs.text }}" \
             -d "access_token=${{ secrets.INSTAGRAM_ACCESS_TOKEN }}")
+          echo "Response: $RESULT"
+          CONTAINER_ID=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+          echo "container_id=$CONTAINER_ID" >> $GITHUB_OUTPUT
 
-          CONTAINER_ID=$(echo $CONTAINER | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
-          echo "Container ID: $CONTAINER_ID"
-
-          # Step 2: Publish
+      - name: Publish to Instagram
+        run: |
           RESULT=$(curl -s -X POST \
             "https://graph.facebook.com/v18.0/${{ secrets.INSTAGRAM_BUSINESS_ACCOUNT_ID }}/media_publish" \
-            -d "creation_id=${CONTAINER_ID}" \
+            -d "creation_id=${{ steps.container.outputs.container_id }}" \
             -d "access_token=${{ secrets.INSTAGRAM_ACCESS_TOKEN }}")
-
           echo "Publish result: $RESULT"
-          echo $RESULT | python3 -c "import sys,json; d=json.load(sys.stdin); print('✅ Posted:', d.get('id','error'))"
+          echo "$RESULT" | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          if 'id' in d:
+              print('✅ Instagram 포스팅 완료! Post ID:', d['id'])
+          else:
+              print('❌ 실패:', d)
+              sys.exit(1)
+          "
