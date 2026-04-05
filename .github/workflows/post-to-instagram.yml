@@ -92,18 +92,79 @@ jobs:
           echo "container_id=$CONTAINER_ID" >> $GITHUB_OUTPUT
 
       - name: Publish to Instagram
+        id: publish
         run: |
           RESULT=$(curl -s -X POST \
             "https://graph.facebook.com/v18.0/${{ secrets.INSTAGRAM_BUSINESS_ACCOUNT_ID }}/media_publish" \
             -d "creation_id=${{ steps.container.outputs.container_id }}" \
             -d "access_token=${{ secrets.INSTAGRAM_ACCESS_TOKEN }}")
           echo "Publish result: $RESULT"
-          echo "$RESULT" | python3 -c "
+          POST_ID=$(echo "$RESULT" | python3 -c "
           import sys, json
           d = json.load(sys.stdin)
           if 'id' in d:
-              print('✅ Instagram 포스팅 완료! Post ID:', d['id'])
+              print(d['id'])
           else:
-              print('❌ 실패:', d)
-              sys.exit(1)
-          "
+              print('', end='')
+              import sys as _sys; print('❌ 실패:', d, file=_sys.stderr); _sys.exit(1)
+          ")
+          echo "✅ Instagram 포스팅 완료! Post ID: $POST_ID"
+          echo "post_id=$POST_ID" >> $GITHUB_OUTPUT
+
+      - name: Upload text to Supabase Storage
+        run: |
+          DATE="${{ steps.file.outputs.date }}"
+          SVG_PATH="${{ steps.file.outputs.svg }}"
+          TXT_FILE="${SVG_PATH%.svg}.txt"
+          if [ -f "$TXT_FILE" ]; then
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+              "${{ secrets.SUPABASE_URL }}/storage/v1/object/dairs-diary/diaries/${DATE}.txt" \
+              -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+              -H "Content-Type: text/plain; charset=utf-8" \
+              --data-binary @"$TXT_FILE")
+            echo "Text upload status: $STATUS"
+          else
+            echo "No .txt file found, skipping text upload"
+          fi
+
+      - name: Commit diary to Obsidian vault
+        env:
+          OBSIDIAN_PAT: ${{ secrets.OBSIDIAN_PAT }}
+        run: |
+          DATE="${{ steps.file.outputs.date }}"
+          SVG_PATH="${{ steps.file.outputs.svg }}"
+          TXT_FILE="${SVG_PATH%.svg}.txt"
+          POST_ID="${{ steps.publish.outputs.post_id }}"
+          DATE_DISPLAY="${DATE//-/.}"
+
+          if [ -f "$TXT_FILE" ]; then
+            DIARY_TEXT=$(cat "$TXT_FILE")
+          else
+            DIARY_TEXT="오늘의 기록."
+          fi
+
+          git clone "https://x-access-token:${OBSIDIAN_PAT}@github.com/germweapon/obsidian-vault.git" /tmp/obsidian-vault
+
+          DIARY_DIR="/tmp/obsidian-vault/02-Projects/데어스-일기/diary"
+          mkdir -p "$DIARY_DIR"
+
+          {
+            printf -- '---\n'
+            printf 'title: "Dairs 일기 — %s"\n' "$DATE_DISPLAY"
+            printf 'date: %s\n' "$DATE"
+            printf 'author: Dairs\n'
+            printf 'tags: [dairs, AI일기, dairsdiary, 감성일기, Dooitspace]\n'
+            printf 'type: dairs-diary\n'
+            [ -n "$POST_ID" ] && printf 'instagram_post_id: "%s"\n' "$POST_ID"
+            printf -- '---\n\n'
+            printf '%s\n' "$DIARY_TEXT"
+            printf '\n## 🔗 관련 노트\n\n'
+            printf '- [[02-Projects/데어스-일기/2026-04-05-퍼블리싱전략]]\n'
+          } > "${DIARY_DIR}/${DATE}.md"
+
+          cd /tmp/obsidian-vault
+          git config user.email "dairs@dooitspace.io"
+          git config user.name "Dairs Bot"
+          git add "02-Projects/데어스-일기/diary/${DATE}.md"
+          git diff --cached --quiet || git commit -m "📔 Dairs 일기 ${DATE} 자동 배포"
+          git push
