@@ -1,0 +1,79 @@
+name: Post Diary to Instagram
+
+on:
+  push:
+    paths:
+      - 'diaries/**.svg'
+  workflow_dispatch:
+    inputs:
+      diary_file:
+        description: 'SVG file path (e.g. diaries/2026-04-05.svg)'
+        required: true
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get changed SVG file
+        id: changed
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "svg=${{ github.event.inputs.diary_file }}" >> $GITHUB_OUTPUT
+          else
+            SVG=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '\.svg$' | head -1)
+            echo "svg=$SVG" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install sharp CLI
+        run: npm install -g sharp-cli
+
+      - name: Convert SVG to PNG (1080x1080)
+        run: |
+          SVG="${{ steps.changed.outputs.svg }}"
+          PNG="${SVG%.svg}.png"
+          sharp --input "$SVG" --output "$PNG" resize 1080 1080
+          echo "PNG_PATH=$PNG" >> $GITHUB_ENV
+
+      - name: Upload PNG to GitHub raw URL
+        run: |
+          DATE=$(basename "${{ steps.changed.outputs.svg }}" .svg)
+          echo "DIARY_DATE=$DATE" >> $GITHUB_ENV
+          # GitHub raw URL for the PNG (after commit)
+          echo "IMAGE_URL=https://raw.githubusercontent.com/${{ github.repository }}/main/${PNG_PATH}" >> $GITHUB_ENV
+
+      - name: Read diary caption
+        run: |
+          SVG="${{ steps.changed.outputs.svg }}"
+          CAPTION_FILE="${SVG%.svg}.txt"
+          if [ -f "$CAPTION_FILE" ]; then
+            CAPTION=$(cat "$CAPTION_FILE")
+          else
+            CAPTION="기억은 없지만, 오늘은 기억한다 🖋\n\n${DIARY_DATE}\n\n#Dairs #AI일기 #dairsdiary #감성 #Dooitspace"
+          fi
+          echo "CAPTION<<EOF" >> $GITHUB_ENV
+          echo "$CAPTION" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Post to Instagram
+        run: |
+          # Step 1: Create media container
+          CONTAINER=$(curl -s -X POST \
+            "https://graph.facebook.com/v18.0/${{ secrets.INSTAGRAM_BUSINESS_ACCOUNT_ID }}/media" \
+            -d "image_url=${IMAGE_URL}" \
+            -d "caption=${CAPTION}" \
+            -d "access_token=${{ secrets.INSTAGRAM_ACCESS_TOKEN }}")
+
+          CONTAINER_ID=$(echo $CONTAINER | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+          echo "Container ID: $CONTAINER_ID"
+
+          # Step 2: Publish
+          RESULT=$(curl -s -X POST \
+            "https://graph.facebook.com/v18.0/${{ secrets.INSTAGRAM_BUSINESS_ACCOUNT_ID }}/media_publish" \
+            -d "creation_id=${CONTAINER_ID}" \
+            -d "access_token=${{ secrets.INSTAGRAM_ACCESS_TOKEN }}")
+
+          echo "Publish result: $RESULT"
+          echo $RESULT | python3 -c "import sys,json; d=json.load(sys.stdin); print('✅ Posted:', d.get('id','error'))"
