@@ -73,11 +73,7 @@ jobs:
           if [ -f "$CAPTION_FILE" ]; then
             CAPTION=$(cat "$CAPTION_FILE")
           else
-            CAPTION="기억은 없지만, 오늘은 기억한다 🖋
-
-${DATE}
-
-#Dairs #AI일기 #dairsdiary #감성일기 #Dooitspace"
+            CAPTION=$(printf '기억은 없지만, 오늘은 기억한다 🖋\n\n%s\n\n#Dairs #AI일기 #dairsdiary #감성일기 #Dooitspace' "$DATE")
           fi
           echo "text<<EOF" >> $GITHUB_OUTPUT
           echo "$CAPTION" >> $GITHUB_OUTPUT
