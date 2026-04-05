@@ -29,29 +29,40 @@ jobs:
           echo "svg=$SVG" >> $GITHUB_OUTPUT
           echo "date=$DATE" >> $GITHUB_OUTPUT
 
-      - name: Install Node deps
-        run: npm install -g @squoosh/cli
+      - name: Install Inkscape
+        run: sudo apt-get install -y inkscape
 
-      - name: Convert SVG to PNG via Inkscape
+      - name: Convert SVG to PNG (1080x1080)
         run: |
-          sudo apt-get install -y inkscape
           inkscape "${{ steps.file.outputs.svg }}" \
             --export-type=png \
             --export-filename=diary.png \
             --export-width=1080 \
             --export-height=1080
 
-      - name: Upload PNG to Imgur (public URL)
-        id: imgur
+      - name: Upload PNG to Supabase Storage
+        id: upload
         run: |
-          RESPONSE=$(curl -s -X POST \
-            -H "Authorization: Client-ID ${{ secrets.IMGUR_CLIENT_ID }}" \
-            -F "image=@diary.png" \
-            -F "type=file" \
-            https://api.imgur.com/3/image)
-          URL=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['link'])")
-          echo "url=$URL" >> $GITHUB_OUTPUT
-          echo "Imgur URL: $URL"
+          DATE="${{ steps.file.outputs.date }}"
+          FILENAME="diaries/${DATE}.png"
+          UPLOAD_URL="${{ secrets.SUPABASE_URL }}/storage/v1/object/dairs-diary/${FILENAME}"
+          PUBLIC_URL="${{ secrets.SUPABASE_URL }}/storage/v1/object/public/dairs-diary/${FILENAME}"
+
+          curl -s -X POST "$UPLOAD_URL" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Content-Type: image/png" \
+            --data-binary @diary.png \
+            -o /dev/null -w "%{http_code}" | tee /tmp/upload_status.txt
+
+          STATUS=$(cat /tmp/upload_status.txt)
+          echo "Upload status: $STATUS"
+          if [ "$STATUS" != "200" ] && [ "$STATUS" != "201" ]; then
+            echo "Upload failed with status $STATUS"
+            exit 1
+          fi
+
+          echo "url=$PUBLIC_URL" >> $GITHUB_OUTPUT
+          echo "Public URL: $PUBLIC_URL"
 
       - name: Read caption
         id: caption
@@ -76,10 +87,10 @@ ${DATE}
         run: |
           RESULT=$(curl -s -X POST \
             "https://graph.facebook.com/v18.0/${{ secrets.INSTAGRAM_BUSINESS_ACCOUNT_ID }}/media" \
-            --data-urlencode "image_url=${{ steps.imgur.outputs.url }}" \
+            --data-urlencode "image_url=${{ steps.upload.outputs.url }}" \
             --data-urlencode "caption=${{ steps.caption.outputs.text }}" \
             -d "access_token=${{ secrets.INSTAGRAM_ACCESS_TOKEN }}")
-          echo "Response: $RESULT"
+          echo "Container response: $RESULT"
           CONTAINER_ID=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
           echo "container_id=$CONTAINER_ID" >> $GITHUB_OUTPUT
 
