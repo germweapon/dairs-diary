@@ -68,7 +68,8 @@ jobs:
         id: caption
         run: |
           DATE="${{ steps.file.outputs.date }}"
-          CAPTION_FILE="${{ steps.file.outputs.svg }%.svg}.txt"
+          SVG_PATH="${{ steps.file.outputs.svg }}"
+          CAPTION_FILE="${SVG_PATH%.svg}.txt"
           if [ -f "$CAPTION_FILE" ]; then
             CAPTION=$(cat "$CAPTION_FILE")
           else
