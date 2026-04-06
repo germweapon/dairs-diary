@@ -62,7 +62,7 @@ jobs:
 
           # PUT + x-upsert with service_role key — safe for re-runs
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X PUT "$UPLOAD_URL" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
             -H "Content-Type: image/png" \
             -H "x-upsert: true" \
             --data-binary @diary.png)
@@ -155,7 +155,7 @@ jobs:
           if [ -f "$TXT_FILE" ]; then
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X PUT \
               "${{ secrets.SUPABASE_URL }}/storage/v1/object/dairs-diary/diaries/${DATE}.txt" \
-              -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+              -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
               -H "Content-Type: text/plain; charset=utf-8" \
               -H "x-upsert: true" \
               --data-binary @"$TXT_FILE")
