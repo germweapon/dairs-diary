@@ -166,6 +166,8 @@ jobs:
           fi
 
       - name: Commit diary to Obsidian vault
+        continue-on-error: true
+        if: ${{ env.OBSIDIAN_PAT != '' }}
         env:
           OBSIDIAN_PAT: ${{ secrets.OBSIDIAN_PAT }}
         run: |
