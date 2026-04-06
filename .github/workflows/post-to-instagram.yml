@@ -187,17 +187,18 @@ jobs:
           mkdir -p "$DIARY_DIR"
 
           {
-            printf -- '---\n'
+            echo '---'
             printf 'title: "Dairs 일기 — %s"\n' "$DATE_DISPLAY"
             printf 'date: %s\n' "$DATE"
-            printf 'author: Dairs\n'
-            printf 'tags: [dairs, AI일기, dairsdiary, 감성일기, Dooitspace]\n'
-            printf 'type: dairs-diary\n'
+            echo 'author: Dairs'
+            echo 'tags: [dairs, AI일기, dairsdiary, 감성일기, Dooitspace]'
+            echo 'type: dairs-diary'
             [ -n "$POST_ID" ] && printf 'instagram_post_id: "%s"\n' "$POST_ID"
-            printf -- '---\n\n'
+            echo '---'
+            echo ''
             printf '%s\n' "$DIARY_TEXT"
             printf '\n## 🔗 관련 노트\n\n'
-            printf '- [[02-Projects/데어스-일기/2026-04-05-퍼블리싱전략]]\n'
+            echo '- [[02-Projects/데어스-일기/2026-04-05-퍼블리싱전략]]'
           } > "${DIARY_DIR}/${DATE}.md"
 
           cd /tmp/obsidian-vault
