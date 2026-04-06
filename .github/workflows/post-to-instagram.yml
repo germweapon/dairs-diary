@@ -23,7 +23,19 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             SVG="${{ github.event.inputs.diary_file }}"
           else
-            SVG=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '\.svg$' | head -1)
+            # Use diff-tree which works even when before SHA is all-zeros (force push / first push)
+            SVG=$(git diff-tree --no-commit-id -r --name-only ${{ github.sha }} | grep 'diaries/.*\.svg$' | head -1)
+            # Fallback: pick the most recently modified SVG in the repo
+            if [ -z "$SVG" ]; then
+              SVG=$(git log --diff-filter=A --name-only --pretty=format: -- 'diaries/*.svg' | grep '\.svg$' | head -1)
+            fi
+            if [ -z "$SVG" ]; then
+              SVG=$(ls -t diaries/*.svg 2>/dev/null | head -1)
+            fi
+          fi
+          if [ -z "$SVG" ]; then
+            echo "❌ SVG 파일을 찾을 수 없습니다."
+            exit 1
           fi
           DATE=$(basename "$SVG" .svg)
           echo "svg=$SVG" >> $GITHUB_OUTPUT
