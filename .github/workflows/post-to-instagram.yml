@@ -56,18 +56,17 @@ jobs:
         id: upload
         run: |
           DATE="${{ steps.file.outputs.date }}"
-          TS=$(date +%s)
-          FILENAME="diaries/${DATE}-${TS}.png"
+          FILENAME="diaries/${DATE}.png"
           UPLOAD_URL="${{ secrets.SUPABASE_URL }}/storage/v1/object/dairs-diary/${FILENAME}"
           PUBLIC_URL="${{ secrets.SUPABASE_URL }}/storage/v1/object/public/dairs-diary/${FILENAME}"
 
-          curl -s -X POST "$UPLOAD_URL" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+          # PUT + x-upsert to allow re-runs without 400
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X PUT "$UPLOAD_URL" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
             -H "Content-Type: image/png" \
-            --data-binary @diary.png \
-            -o /dev/null -w "%{http_code}" | tee /tmp/upload_status.txt
+            -H "x-upsert: true" \
+            --data-binary @diary.png)
 
-          STATUS=$(cat /tmp/upload_status.txt)
           echo "Upload status: $STATUS"
           if [ "$STATUS" != "200" ] && [ "$STATUS" != "201" ]; then
             echo "Upload failed with status $STATUS"
@@ -154,11 +153,11 @@ jobs:
           SVG_PATH="${{ steps.file.outputs.svg }}"
           TXT_FILE="${SVG_PATH%.svg}.txt"
           if [ -f "$TXT_FILE" ]; then
-            TS=$(date +%s)
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
-              "${{ secrets.SUPABASE_URL }}/storage/v1/object/dairs-diary/diaries/${DATE}-${TS}.txt" \
-              -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X PUT \
+              "${{ secrets.SUPABASE_URL }}/storage/v1/object/dairs-diary/diaries/${DATE}.txt" \
+              -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
               -H "Content-Type: text/plain; charset=utf-8" \
+              -H "x-upsert: true" \
               --data-binary @"$TXT_FILE")
             echo "Text upload status: $STATUS"
           else
