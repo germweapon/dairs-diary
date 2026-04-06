@@ -103,6 +103,29 @@ jobs:
           CONTAINER_ID=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
           echo "container_id=$CONTAINER_ID" >> $GITHUB_OUTPUT
 
+      - name: Wait for media container to be ready
+        run: |
+          CONTAINER_ID="${{ steps.container.outputs.container_id }}"
+          ACCESS_TOKEN="${{ secrets.INSTAGRAM_ACCESS_TOKEN }}"
+          for i in $(seq 1 12); do
+            STATUS=$(curl -s \
+              "https://graph.facebook.com/v18.0/${CONTAINER_ID}?fields=status_code&access_token=${ACCESS_TOKEN}" \
+              | python3 -c "import sys,json; print(json.load(sys.stdin).get('status_code',''))")
+            echo "Container status (attempt $i): $STATUS"
+            if [ "$STATUS" = "FINISHED" ]; then
+              echo "✅ Container ready."
+              break
+            elif [ "$STATUS" = "ERROR" ] || [ "$STATUS" = "EXPIRED" ]; then
+              echo "❌ Container failed with status: $STATUS"
+              exit 1
+            fi
+            sleep 5
+          done
+          if [ "$STATUS" != "FINISHED" ]; then
+            echo "❌ Container not ready after 60s (last status: $STATUS)"
+            exit 1
+          fi
+
       - name: Publish to Instagram
         id: publish
         run: |
