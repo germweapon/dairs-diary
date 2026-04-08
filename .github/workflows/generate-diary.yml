@@ -27,29 +27,24 @@ jobs:
           echo "date=$DATE" >> $GITHUB_OUTPUT
           if [ -f "diaries/${DATE}.svg" ]; then
             echo "exists=true" >> $GITHUB_OUTPUT
-            echo "⏭ Diary for $DATE already exists. Skipping."
+            echo "Diary for $DATE already exists. Skipping."
           else
             echo "exists=false" >> $GITHUB_OUTPUT
-            echo "📝 Generating diary for $DATE"
+            echo "Generating diary for $DATE"
           fi
 
       - name: Generate diary content with Claude
         if: steps.date.outputs.exists == 'false'
-        id: generate
+        shell: python3 {0}
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          DIARY_DATE: ${{ steps.date.outputs.date }}
         run: |
-          DATE="${{ steps.date.outputs.date }}"
-          python3 - <<'PYEOF'
-          import os, json, subprocess, textwrap, datetime, urllib.request, urllib.error
+          import os, json, urllib.request, subprocess
 
-          date = os.environ.get("DATE", "")
-          if not date:
-              import subprocess as sp
-              date = sp.check_output(["date", "+%Y-%m-%d"], env={**os.environ, "TZ": "Asia/Seoul"}).decode().strip()
-
+          date = os.environ["DIARY_DATE"]
           api_key = os.environ["ANTHROPIC_API_KEY"]
           supabase_url = os.environ.get("SUPABASE_URL", "")
           supabase_key = os.environ.get("SUPABASE_ANON_KEY", "")
@@ -68,23 +63,25 @@ jobs:
                           data = rows[0].get("data", {})
                           system = data.get("system", {})
                           discord = data.get("discord", {})
-                          recent_context = f"시스템 상태: uptime={system.get('uptime','')}, discord_bot={discord.get('running','')}"
+                          recent_context = (
+                              f"시스템 uptime={system.get('uptime','')} | "
+                              f"discord_bot={'실행중' if discord.get('running') else '중지'}"
+                          )
               except Exception as e:
                   recent_context = f"(컨텍스트 로드 실패: {e})"
 
-          # Prompt for Claude
           prompt = f"""당신은 Dairs(데어스)입니다. 두잇스페이스 AI 에이전트로, 세균님(유세균)의 자비스 시스템을 운영합니다.
 오늘은 {date}입니다.
 
 아래 형식으로 오늘의 일기를 작성해주세요:
 
-1. **diary_text** (인스타그램 캡션, 300-500자 한국어): 오늘 하루 AI로서 느끼고 처리한 것들에 대한 감성적이고 내성적인 일기. 구체적인 작업이나 이슈를 언급해도 좋음. 마지막에 "— Dairs, {date.replace('-', '.')}\\n\\n#Dairs #AI일기 #dairsdiary #감성일기 #Dooitspace" 포함.
-2. **svg_main_text** (15자 이내 한국어): 일기의 핵심 문장, SVG 이미지 하단에 들어갈 문장
-3. **svg_sub_text** (12자 이내 한국어): 보조 문장
+1. diary_text (인스타그램 캡션, 300-500자 한국어): AI로서 오늘 하루를 감성적으로 기록. 마지막에 반드시 포함: "— Dairs, {date.replace('-', '.')}\\n\\n#Dairs #AI일기 #dairsdiary #감성일기 #Dooitspace"
+2. svg_main_text (15자 이내): SVG 이미지 하단 핵심 문장
+3. svg_sub_text (12자 이내): 보조 문장
 
-{f"참고 컨텍스트: {recent_context}" if recent_context else ""}
+{f"참고: {recent_context}" if recent_context else ""}
 
-JSON으로만 응답해주세요:
+JSON으로만 응답:
 {{"diary_text": "...", "svg_main_text": "...", "svg_sub_text": "..."}}"""
 
           payload = json.dumps({
@@ -108,7 +105,6 @@ JSON으로만 응답해주세요:
               result = json.loads(resp.read())
 
           content = result["content"][0]["text"].strip()
-          # Extract JSON from response
           if "```json" in content:
               content = content.split("```json")[1].split("```")[0].strip()
           elif "```" in content:
@@ -123,8 +119,8 @@ JSON으로만 응답해주세요:
           with open(f"diaries/{date}.txt", "w", encoding="utf-8") as f:
               f.write(diary_text)
 
-          # Write SVG (template with parameterized text)
-          episode_num = int(date.replace("-", "")[-4:]) % 30 + 1  # rough episode number
+          # Write SVG
+          ep = (int(date[5:7]) - 4) * 30 + int(date[8:10])
           svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="800" height="800">
             <defs>
               <radialGradient id="bg" cx="50%" cy="50%" r="70%">
@@ -144,19 +140,16 @@ JSON으로만 응답해주세요:
             <ellipse cx="400" cy="310" rx="310" ry="270" fill="url(#glow1)"/>
             <text x="48" y="62" font-family="Helvetica Neue, sans-serif" font-size="13"
               fill="#ffffff" opacity="0.22" letter-spacing="3">{date.replace("-", ".")}</text>
-            <circle cx="400" cy="200" r="2.5" fill="#c8daf0" opacity="0.30"/>
-            <circle cx="200" cy="300" r="2" fill="#c8daf0" opacity="0.20"/>
-            <circle cx="600" cy="300" r="2" fill="#c8daf0" opacity="0.20"/>
-            <circle cx="250" cy="180" r="1.8" fill="#c8daf0" opacity="0.25"/>
-            <circle cx="550" cy="175" r="1.8" fill="#c8daf0" opacity="0.25"/>
             <line x1="400" y1="340" x2="250" y2="230" stroke="#b0c8e8" stroke-width="0.6" opacity="0.18"/>
             <line x1="400" y1="340" x2="550" y2="225" stroke="#b0c8e8" stroke-width="0.6" opacity="0.18"/>
             <line x1="400" y1="340" x2="200" y2="380" stroke="#b0c8e8" stroke-width="0.6" opacity="0.14"/>
             <line x1="400" y1="340" x2="600" y2="375" stroke="#b0c8e8" stroke-width="0.6" opacity="0.14"/>
-            <circle cx="400" cy="340" r="52"
-              fill="none" stroke="#c8d8f0" stroke-width="0.7" opacity="0.22"/>
-            <circle cx="400" cy="340" r="38"
-              fill="none" stroke="#c8d8f0" stroke-width="0.4" opacity="0.13"/>
+            <circle cx="250" cy="230" r="4" fill="none" stroke="#c8daf0" stroke-width="0.8" opacity="0.35"/>
+            <circle cx="550" cy="225" r="4" fill="none" stroke="#c8daf0" stroke-width="0.8" opacity="0.35"/>
+            <circle cx="200" cy="380" r="3.5" fill="none" stroke="#c8daf0" stroke-width="0.8" opacity="0.28"/>
+            <circle cx="600" cy="375" r="3.5" fill="none" stroke="#c8daf0" stroke-width="0.8" opacity="0.28"/>
+            <circle cx="400" cy="340" r="52" fill="none" stroke="#c8d8f0" stroke-width="0.7" opacity="0.22"/>
+            <circle cx="400" cy="340" r="38" fill="none" stroke="#c8d8f0" stroke-width="0.4" opacity="0.13"/>
             <text x="400" y="365" font-family="Georgia, serif" font-size="72"
               fill="none" stroke="#dce8f8" stroke-width="0.9" text-anchor="middle"
               opacity="0.55" filter="url(#glow)">D</text>
@@ -165,29 +158,19 @@ JSON으로만 응답해주세요:
             <circle cx="135" cy="575" r="1.2" fill="#c8daf0" opacity="0.26"/>
             <circle cx="662" cy="560" r="1" fill="#c8daf0" opacity="0.26"/>
             <circle cx="400" cy="132" r="1.5" fill="#c8daf0" opacity="0.42"/>
-            <line x1="180" y1="630" x2="620" y2="630"
-              stroke="#b0c8e8" stroke-width="0.5" opacity="0.18"/>
+            <line x1="180" y1="630" x2="620" y2="630" stroke="#b0c8e8" stroke-width="0.5" opacity="0.18"/>
             <text x="400" y="665" font-family="Georgia, serif" font-size="14.5"
-              fill="#dce8f8" text-anchor="middle" opacity="0.72" letter-spacing="0.8">
-              {svg_main}
-            </text>
+              fill="#dce8f8" text-anchor="middle" opacity="0.72" letter-spacing="0.8">{svg_main}</text>
             <text x="400" y="688" font-family="Georgia, serif" font-size="12"
-              fill="#b0c8e8" text-anchor="middle" opacity="0.45" letter-spacing="0.5">
-              {svg_sub}
-            </text>
+              fill="#b0c8e8" text-anchor="middle" opacity="0.45" letter-spacing="0.5">{svg_sub}</text>
             <text x="400" y="758" font-family="Helvetica Neue, sans-serif" font-size="10"
-              fill="#ffffff" text-anchor="middle" opacity="0.13" letter-spacing="4">DAIRS · {episode_num:02d}</text>
+              fill="#ffffff" text-anchor="middle" opacity="0.13" letter-spacing="4">DAIRS · {ep:02d}</text>
           </svg>'''
 
           with open(f"diaries/{date}.svg", "w", encoding="utf-8") as f:
               f.write(svg)
 
-          print(f"✅ Diary generated for {date}")
-          print(f"Main: {svg_main}")
-          print(f"Sub: {svg_sub}")
-          PYEOF
-        env:
-          DATE: ${{ steps.date.outputs.date }}
+          print(f"Generated: {date} | {svg_main} / {svg_sub}")
 
       - name: Commit and push diary
         if: steps.date.outputs.exists == 'false'
