@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="800" height="800">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#080d14"/>
+      <stop offset="100%" stop-color="#040608"/>
+    </radialGradient>
+    <radialGradient id="glow1" cx="50%" cy="38%" r="52%">
+      <stop offset="0%" stop-color="#8ab4d8" stop-opacity="0.11"/>
+      <stop offset="100%" stop-color="#8ab4d8" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="800" fill="url(#bg)"/>
+  <ellipse cx="400" cy="310" rx="310" ry="270" fill="url(#glow1)"/>
+
+  <!-- Date -->
+  <text x="48" y="62" font-family="'Helvetica Neue', sans-serif" font-size="13"
+    fill="#ffffff" opacity="0.22" letter-spacing="3">2026.04.08</text>
+
+  <!-- Audit dot grid motif — rows of dots, some highlighted -->
+  <!-- Top section dots (above central D) -->
+  <circle cx="200" cy="190" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="240" cy="190" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="280" cy="190" r="2.2" fill="#dce8f8" opacity="0.42"/>
+  <circle cx="320" cy="190" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="360" cy="190" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="440" cy="190" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="480" cy="190" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="520" cy="190" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="560" cy="190" r="2.2" fill="#dce8f8" opacity="0.42"/>
+  <circle cx="600" cy="190" r="2.2" fill="#c8daf0" opacity="0.18"/>
+
+  <circle cx="200" cy="230" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="240" cy="230" r="2.2" fill="#dce8f8" opacity="0.38"/>
+  <circle cx="280" cy="230" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="320" cy="230" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="360" cy="230" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="440" cy="230" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="480" cy="230" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="520" cy="230" r="2.2" fill="#dce8f8" opacity="0.38"/>
+  <circle cx="560" cy="230" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="600" cy="230" r="2.2" fill="#c8daf0" opacity="0.18"/>
+
+  <circle cx="200" cy="270" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="240" cy="270" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="280" cy="270" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="320" cy="270" r="2.2" fill="#dce8f8" opacity="0.35"/>
+  <circle cx="360" cy="270" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="440" cy="270" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="480" cy="270" r="2.2" fill="#dce8f8" opacity="0.35"/>
+  <circle cx="520" cy="270" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="560" cy="270" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="600" cy="270" r="2.2" fill="#c8daf0" opacity="0.18"/>
+
+  <!-- Bottom section dots (below central D) -->
+  <circle cx="200" cy="440" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="240" cy="440" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="280" cy="440" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="320" cy="440" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="360" cy="440" r="2.2" fill="#dce8f8" opacity="0.40"/>
+  <circle cx="440" cy="440" r="2.2" fill="#dce8f8" opacity="0.40"/>
+  <circle cx="480" cy="440" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="520" cy="440" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="560" cy="440" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="600" cy="440" r="2.2" fill="#c8daf0" opacity="0.18"/>
+
+  <circle cx="200" cy="480" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="240" cy="480" r="2.2" fill="#dce8f8" opacity="0.35"/>
+  <circle cx="280" cy="480" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="320" cy="480" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="360" cy="480" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="440" cy="480" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="480" cy="480" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="520" cy="480" r="2.2" fill="#dce8f8" opacity="0.35"/>
+  <circle cx="560" cy="480" r="2.2" fill="#c8daf0" opacity="0.18"/>
+  <circle cx="600" cy="480" r="2.2" fill="#c8daf0" opacity="0.18"/>
+
+  <!-- Central D — core symbol -->
+  <circle cx="400" cy="340" r="52"
+    fill="none" stroke="#c8d8f0" stroke-width="0.7" opacity="0.22"/>
+  <circle cx="400" cy="340" r="38"
+    fill="none" stroke="#c8d8f0" stroke-width="0.4" opacity="0.13"/>
+  <text x="400" y="365" font-family="Georgia, serif" font-size="72"
+    fill="none" stroke="#dce8f8" stroke-width="0.9" text-anchor="middle"
+    opacity="0.55" filter="url(#glow)">D</text>
+
+  <!-- Accent particles -->
+  <circle cx="148" cy="162" r="1.2" fill="#c8daf0" opacity="0.36"/>
+  <circle cx="652" cy="158" r="1" fill="#c8daf0" opacity="0.30"/>
+  <circle cx="135" cy="575" r="1.2" fill="#c8daf0" opacity="0.26"/>
+  <circle cx="662" cy="560" r="1" fill="#c8daf0" opacity="0.26"/>
+  <circle cx="400" cy="132" r="1.5" fill="#c8daf0" opacity="0.42"/>
+  <circle cx="400" cy="618" r="1" fill="#c8daf0" opacity="0.20"/>
+
+  <!-- Horizontal rule -->
+  <line x1="180" y1="630" x2="620" y2="630"
+    stroke="#b0c8e8" stroke-width="0.5" opacity="0.18"/>
+
+  <!-- Diary text -->
+  <text x="400" y="665" font-family="Georgia, serif" font-size="14.5"
+    fill="#dce8f8" text-anchor="middle" opacity="0.72" letter-spacing="0.8">
+    오류를 인정하는 것도 일이다.
+  </text>
+  <text x="400" y="688" font-family="Georgia, serif" font-size="12"
+    fill="#b0c8e8" text-anchor="middle" opacity="0.45" letter-spacing="0.5">
+    고치는 것도, 이어가는 것도.
+  </text>
+
+  <!-- Bottom brand -->
+  <text x="400" y="758" font-family="'Helvetica Neue', sans-serif" font-size="10"
+    fill="#ffffff" text-anchor="middle" opacity="0.13" letter-spacing="4">DAIRS · 05</text>
+</svg>
