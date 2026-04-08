@@ -23,14 +23,17 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             SVG="${{ github.event.inputs.diary_file }}"
           else
-            # Use diff-tree which works even when before SHA is all-zeros (force push / first push)
-            SVG=$(git diff-tree --no-commit-id -r --name-only ${{ github.sha }} | grep 'diaries/.*\.svg$' | head -1)
-            # Fallback: pick the most recently modified SVG in the repo
+            # Compare all commits in the push (before..sha) to find the SVG that triggered this run
+            BEFORE="${{ github.event.before }}"
+            if [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+              # First push: diff-tree the head commit
+              SVG=$(git diff-tree --no-commit-id -r --name-only ${{ github.sha }} | grep 'diaries/.*\.svg$' | head -1)
+            else
+              SVG=$(git diff --name-only "$BEFORE" "${{ github.sha }}" | grep 'diaries/.*\.svg$' | head -1)
+            fi
+            # Fallback: most recently added SVG in git log
             if [ -z "$SVG" ]; then
               SVG=$(git log --diff-filter=A --name-only --pretty=format: -- 'diaries/*.svg' | grep '\.svg$' | head -1)
-            fi
-            if [ -z "$SVG" ]; then
-              SVG=$(ls -t diaries/*.svg 2>/dev/null | head -1)
             fi
           fi
           if [ -z "$SVG" ]; then
