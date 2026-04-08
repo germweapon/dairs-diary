@@ -93,14 +93,23 @@ jobs:
 
       - name: Create Instagram media container
         id: container
+        env:
+          IG_ID: ${{ secrets.INSTAGRAM_BUSINESS_ACCOUNT_ID }}
+          IMAGE_URL: ${{ steps.upload.outputs.url }}
+          CAPTION: ${{ steps.caption.outputs.text }}
+          ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
         run: |
           RESULT=$(curl -s -X POST \
-            "https://graph.facebook.com/v18.0/${{ secrets.INSTAGRAM_BUSINESS_ACCOUNT_ID }}/media" \
-            --data-urlencode "image_url=${{ steps.upload.outputs.url }}" \
-            --data-urlencode "caption=${{ steps.caption.outputs.text }}" \
-            -d "access_token=${{ secrets.INSTAGRAM_ACCESS_TOKEN }}")
+            "https://graph.facebook.com/v18.0/${IG_ID}/media" \
+            --data-urlencode "image_url=${IMAGE_URL}" \
+            --data-urlencode "caption=${CAPTION}" \
+            --data-urlencode "access_token=${ACCESS_TOKEN}")
           echo "Container response: $RESULT"
-          CONTAINER_ID=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+          CONTAINER_ID=$(echo "$RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('id','')); sys.exit(0 if 'id' in d else 1)")
+          if [ -z "$CONTAINER_ID" ]; then
+            echo "❌ Failed to create container. Response: $RESULT"
+            exit 1
+          fi
           echo "container_id=$CONTAINER_ID" >> $GITHUB_OUTPUT
 
       - name: Wait for media container to be ready
