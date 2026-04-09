@@ -176,8 +176,8 @@ JSON으로만 응답:
         if: steps.date.outputs.exists == 'false'
         run: |
           DATE="${{ steps.date.outputs.date }}"
-          git config user.email "dairs@dooitspace.io"
-          git config user.name "Dairs Bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
           git add "diaries/${DATE}.svg" "diaries/${DATE}.txt"
           git diff --cached --quiet && echo "Nothing to commit" && exit 0
           git commit -m "diary: Dairs ${DATE} 자동 생성"

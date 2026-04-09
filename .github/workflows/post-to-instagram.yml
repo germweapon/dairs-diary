@@ -214,8 +214,8 @@ jobs:
           } > "${DIARY_DIR}/${DATE}.md"
 
           cd /tmp/obsidian-vault
-          git config user.email "dairs@dooitspace.io"
-          git config user.name "Dairs Bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
           git add "02-Projects/데어스-일기/diary/${DATE}.md"
           git diff --cached --quiet || git commit -m "📔 Dairs 일기 ${DATE} 자동 배포"
           git push
