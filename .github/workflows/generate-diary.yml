@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.OBSIDIAN_PAT }}
 
       - name: Determine date
         id: date
