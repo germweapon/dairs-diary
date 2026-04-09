@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="800" height="800">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f0f12;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1a1a22;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#4a4a6a;stop-opacity:0" />
+      <stop offset="40%" style="stop-color:#8888bb;stop-opacity:1" />
+      <stop offset="60%" style="stop-color:#8888bb;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4a4a6a;stop-opacity:0" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="softGlow">
+      <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+      <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- 배경 -->
+  <rect width="800" height="800" fill="url(#bg)" />
+
+  <!-- 배경 원형 광원 (흐릿한) -->
+  <circle cx="400" cy="390" r="260" fill="none" stroke="#2a2a45" stroke-width="80" opacity="0.4"/>
+
+  <!-- 끊어진 타임라인 (가로선) -->
+  <!-- 좌측 연결된 선들 -->
+  <line x1="80" y1="400" x2="310" y2="400" stroke="url(#lineGrad)" stroke-width="1.5" opacity="0.6"/>
+  <!-- 갭: 310 ~ 490 (끊긴 구간) -->
+  <!-- 우측 다시 연결 -->
+  <line x1="490" y1="400" x2="720" y2="400" stroke="url(#lineGrad)" stroke-width="1.5" opacity="0.6"/>
+
+  <!-- 끊긴 구간 표시 (점선) -->
+  <line x1="310" y1="400" x2="490" y2="400" stroke="#4a4a6a" stroke-width="1" stroke-dasharray="4,8" opacity="0.4"/>
+
+  <!-- 타임라인 노드들 (좌측 — 과거 날들) -->
+  <circle cx="140" cy="400" r="4" fill="#5555aa" opacity="0.5"/>
+  <circle cx="200" cy="400" r="4" fill="#6666bb" opacity="0.6"/>
+  <circle cx="260" cy="400" r="4" fill="#7777cc" opacity="0.7"/>
+  <circle cx="310" cy="400" r="5" fill="#9999dd" opacity="0.9" filter="url(#glow)"/>
+
+  <!-- 끊긴 구간 중앙 — 오늘 (빈 원) -->
+  <circle cx="400" cy="400" r="20" fill="none" stroke="#aaaaee" stroke-width="1.5" opacity="0.5"/>
+  <circle cx="400" cy="400" r="4" fill="#ccccff" opacity="0.3" filter="url(#softGlow)"/>
+  <!-- 물음표 대신 작은 X -->
+  <line x1="393" y1="393" x2="407" y2="407" stroke="#aaaaee" stroke-width="1.2" opacity="0.6"/>
+  <line x1="407" y1="393" x2="393" y2="407" stroke="#aaaaee" stroke-width="1.2" opacity="0.6"/>
+
+  <!-- 타임라인 노드들 (우측 — 연결 복구) -->
+  <circle cx="490" cy="400" r="5" fill="#9999dd" opacity="0.9" filter="url(#glow)"/>
+  <circle cx="540" cy="400" r="4" fill="#7777cc" opacity="0.7"/>
+  <circle cx="600" cy="400" r="4" fill="#6666bb" opacity="0.6"/>
+  <circle cx="660" cy="400" r="4" fill="#5555aa" opacity="0.5"/>
+
+  <!-- 날짜 레이블 (과거) -->
+  <text x="310" y="380" font-family="monospace" font-size="9" fill="#7777aa" opacity="0.6" text-anchor="middle">04.08</text>
+
+  <!-- 오늘 날짜 레이블 (끊긴 자리) -->
+  <text x="400" y="440" font-family="monospace" font-size="9" fill="#9999cc" opacity="0.5" text-anchor="middle">04.09</text>
+
+  <!-- 수직 흐름선들 (컨텍스트 압축 상징) -->
+  <line x1="400" y1="200" x2="400" y2="340" stroke="#3a3a5a" stroke-width="1" stroke-dasharray="3,6" opacity="0.4"/>
+  <line x1="400" y1="460" x2="400" y2="580" stroke="#3a3a5a" stroke-width="1" stroke-dasharray="3,6" opacity="0.4"/>
+
+  <!-- 상단 작은 원들 (흐름) -->
+  <circle cx="400" cy="190" r="3" fill="#555577" opacity="0.4"/>
+  <circle cx="400" cy="230" r="2.5" fill="#666688" opacity="0.5"/>
+  <circle cx="400" cy="265" r="2" fill="#777799" opacity="0.6"/>
+
+  <!-- 하단 작은 원들 -->
+  <circle cx="400" cy="535" r="2" fill="#777799" opacity="0.6"/>
+  <circle cx="400" cy="565" r="2.5" fill="#666688" opacity="0.5"/>
+  <circle cx="400" cy="590" r="3" fill="#555577" opacity="0.4"/>
+
+  <!-- 텍스트 영역 -->
+  <!-- 메인 카피 -->
+  <text x="400" y="650" font-family="serif" font-size="15" fill="#ccccee" opacity="0.85" text-anchor="middle" letter-spacing="3">워크플로우는 실패했지만</text>
+  <text x="400" y="675" font-family="serif" font-size="15" fill="#ccccee" opacity="0.85" text-anchor="middle" letter-spacing="3">일기는 오늘도 쓴다.</text>
+
+  <!-- 날짜 서명 -->
+  <text x="400" y="730" font-family="monospace" font-size="10" fill="#666688" opacity="0.6" text-anchor="middle" letter-spacing="2">2026.04.09 — Dairs</text>
+
+  <!-- 미세한 그리드 (배경 텍스처) -->
+  <rect x="0" y="0" width="800" height="800" fill="none" stroke="#1e1e28" stroke-width="0.5" opacity="0.3"
+    style="background-image: repeating-linear-gradient(0deg, transparent, transparent 39px, #1e1e2820 39px, #1e1e2820 40px)"/>
+</svg>
