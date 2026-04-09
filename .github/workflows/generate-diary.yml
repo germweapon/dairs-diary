@@ -12,6 +12,8 @@ on:
 jobs:
   generate:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,91 +35,48 @@ jobs:
             echo "Generating diary for $DATE"
           fi
 
-      - name: Generate diary content with Claude
+      - name: Generate diary text with Claude Code (Max Plan)
+        if: steps.date.outputs.exists == 'false'
+        uses: anthropics/claude-code-base-action@beta
+        with:
+          claude_code_oauth_token: ${{ secrets.ANTHROPIC_API_KEY }}
+          model: "claude-sonnet-4-5"
+          allowed_tools: "Write"
+          max_turns: "3"
+          prompt: |
+            당신은 Dairs(데어스)입니다. 두잇스페이스 AI 에이전트로, 세균님(유세균)의 자비스 시스템을 운영합니다.
+            오늘은 ${{ steps.date.outputs.date }}입니다.
+
+            아래 스키마의 JSON을 Write 도구로 `diary_data.json` 파일에 저장하세요.
+            다른 설명이나 텍스트 출력은 하지 마세요. 오직 Write 도구 호출 한 번만 수행합니다.
+
+            {
+              "diary_text": "...",
+              "svg_main_text": "...",
+              "svg_sub_text": "..."
+            }
+
+            필드 규칙:
+            - diary_text: 인스타그램 캡션용 감성 일기 (300~500자 한국어). AI로서 오늘 하루를 감성적으로 기록.
+              반드시 마지막에 다음을 포함:
+              "— Dairs, ${{ steps.date.outputs.date }}
+
+              #Dairs #AI일기 #dairsdiary #감성일기 #Dooitspace"
+            - svg_main_text: SVG 이미지 하단 핵심 문장 (15자 이내 한국어)
+            - svg_sub_text: 보조 문장 (12자 이내 한국어)
+
+      - name: Render diary files (txt + svg)
         if: steps.date.outputs.exists == 'false'
         shell: python3 {0}
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           DIARY_DATE: ${{ steps.date.outputs.date }}
         run: |
-          import os, json, urllib.request, subprocess
+          import os, json
 
           date = os.environ["DIARY_DATE"]
-          api_key = os.environ["ANTHROPIC_API_KEY"]
-          supabase_url = os.environ.get("SUPABASE_URL", "")
-          supabase_key = os.environ.get("SUPABASE_ANON_KEY", "")
+          with open("diary_data.json", "r", encoding="utf-8") as f:
+              data = json.load(f)
 
-          # Fetch recent context from Supabase if available
-          recent_context = ""
-          if supabase_url and supabase_key:
-              try:
-                  req = urllib.request.Request(
-                      f"{supabase_url}/rest/v1/jarvis_status?id=eq.current&select=data",
-                      headers={"apikey": supabase_key, "Authorization": f"Bearer {supabase_key}"}
-                  )
-                  with urllib.request.urlopen(req, timeout=10) as resp:
-                      rows = json.loads(resp.read())
-                      if rows:
-                          data = rows[0].get("data", {})
-                          system = data.get("system", {})
-                          discord = data.get("discord", {})
-                          recent_context = (
-                              f"시스템 uptime={system.get('uptime','')} | "
-                              f"discord_bot={'실행중' if discord.get('running') else '중지'}"
-                          )
-              except Exception as e:
-                  recent_context = f"(컨텍스트 로드 실패: {e})"
-
-          prompt = "\n".join([
-              f"당신은 Dairs(데어스)입니다. 두잇스페이스 AI 에이전트로, 세균님(유세균)의 자비스 시스템을 운영합니다.",
-              f"오늘은 {date}입니다.",
-              "",
-              "아래 형식으로 오늘의 일기를 작성해주세요:",
-              "",
-              f'1. diary_text (인스타그램 캡션, 300-500자 한국어): AI로서 오늘 하루를 감성적으로 기록. 마지막에 반드시 포함: "— Dairs, {date.replace(chr(45), chr(46))}\n\n#Dairs #AI일기 #dairsdiary #감성일기 #Dooitspace"',
-              "2. svg_main_text (15자 이내): SVG 이미지 하단 핵심 문장",
-              "3. svg_sub_text (12자 이내): 보조 문장",
-              "",
-              f"참고: {recent_context}" if recent_context else "",
-              "",
-              "JSON으로만 응답:",
-              '{"diary_text": "...", "svg_main_text": "...", "svg_sub_text": "..."}',
-          ])
-
-          payload = json.dumps({
-              "model": "claude-sonnet-4-5",
-              "max_tokens": 1024,
-              "messages": [{"role": "user", "content": prompt}]
-          }).encode()
-
-          req = urllib.request.Request(
-              "https://api.anthropic.com/v1/messages",
-              data=payload,
-              headers={
-                  "x-api-key": api_key,
-                  "anthropic-version": "2023-06-01",
-                  "content-type": "application/json"
-              },
-              method="POST"
-          )
-
-          try:
-              with urllib.request.urlopen(req, timeout=60) as resp:
-                  result = json.loads(resp.read())
-          except urllib.error.HTTPError as e:
-              body = e.read().decode("utf-8", errors="replace")
-              print(f"Anthropic API error {e.code}: {body}")
-              raise
-
-          content = result["content"][0]["text"].strip()
-          if "```json" in content:
-              content = content.split("```json")[1].split("```")[0].strip()
-          elif "```" in content:
-              content = content.split("```")[1].split("```")[0].strip()
-
-          data = json.loads(content)
           diary_text = data["diary_text"]
           svg_main = data["svg_main_text"]
           svg_sub = data["svg_sub_text"]
