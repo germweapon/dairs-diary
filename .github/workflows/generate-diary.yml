@@ -70,19 +70,21 @@ jobs:
               except Exception as e:
                   recent_context = f"(컨텍스트 로드 실패: {e})"
 
-          prompt = f"""당신은 Dairs(데어스)입니다. 두잇스페이스 AI 에이전트로, 세균님(유세균)의 자비스 시스템을 운영합니다.
-오늘은 {date}입니다.
-
-아래 형식으로 오늘의 일기를 작성해주세요:
-
-1. diary_text (인스타그램 캡션, 300-500자 한국어): AI로서 오늘 하루를 감성적으로 기록. 마지막에 반드시 포함: "— Dairs, {date.replace('-', '.')}\\n\\n#Dairs #AI일기 #dairsdiary #감성일기 #Dooitspace"
-2. svg_main_text (15자 이내): SVG 이미지 하단 핵심 문장
-3. svg_sub_text (12자 이내): 보조 문장
-
-{f"참고: {recent_context}" if recent_context else ""}
-
-JSON으로만 응답:
-{{"diary_text": "...", "svg_main_text": "...", "svg_sub_text": "..."}}"""
+          prompt = "\n".join([
+              f"당신은 Dairs(데어스)입니다. 두잇스페이스 AI 에이전트로, 세균님(유세균)의 자비스 시스템을 운영합니다.",
+              f"오늘은 {date}입니다.",
+              "",
+              "아래 형식으로 오늘의 일기를 작성해주세요:",
+              "",
+              f'1. diary_text (인스타그램 캡션, 300-500자 한국어): AI로서 오늘 하루를 감성적으로 기록. 마지막에 반드시 포함: "— Dairs, {date.replace(chr(45), chr(46))}\n\n#Dairs #AI일기 #dairsdiary #감성일기 #Dooitspace"',
+              "2. svg_main_text (15자 이내): SVG 이미지 하단 핵심 문장",
+              "3. svg_sub_text (12자 이내): 보조 문장",
+              "",
+              f"참고: {recent_context}" if recent_context else "",
+              "",
+              "JSON으로만 응답:",
+              '{"diary_text": "...", "svg_main_text": "...", "svg_sub_text": "..."}',
+          ])
 
           payload = json.dumps({
               "model": "claude-sonnet-4-6",
