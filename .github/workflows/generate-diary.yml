@@ -150,3 +150,161 @@ jobs:
           git diff --cached --quiet && echo "Nothing to commit" && exit 0
           git commit -m "diary: Dairs ${DATE} 자동 생성"
           git push
+
+      - name: Upload to Supabase Storage
+        if: steps.date.outputs.exists == 'false'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          DIARY_DATE: ${{ steps.date.outputs.date }}
+        run: |
+          DATE="${DIARY_DATE}"
+          echo "Converting SVG to PNG..."
+          npm install -g @resvg/resvg-cli --silent 2>/dev/null || apt-get install -q -y librsvg2-bin 2>/dev/null
+          
+          # SVG → PNG 변환 (rsvg-convert or resvg)
+          if command -v rsvg-convert &>/dev/null; then
+            rsvg-convert -w 1080 -h 1080 "diaries/${DATE}.svg" -o "diaries/${DATE}.png"
+          else
+            npx @resvg/resvg-cli "diaries/${DATE}.svg" "diaries/${DATE}.png" -w 1080 -h 1080 2>/dev/null
+          fi
+          
+          echo "Uploading to Supabase Storage..."
+          python3 << 'PYEOF'
+          import os, urllib.request, urllib.error
+          
+          base_url = os.environ["SUPABASE_URL"].rstrip("/")
+          key = os.environ["SUPABASE_ANON_KEY"]
+          date = os.environ["DIARY_DATE"]
+          
+          def upload(local_path, storage_path, content_type):
+              with open(local_path, "rb") as f:
+                  data = f.read()
+              url = f"{base_url}/storage/v1/object/dairs-diary/diaries/{storage_path}"
+              # Try UPSERT first
+              req = urllib.request.Request(
+                  url, data=data,
+                  headers={"apikey": key, "Authorization": f"Bearer {key}",
+                           "Content-Type": content_type, "x-upsert": "true"},
+                  method="POST"
+              )
+              try:
+                  with urllib.request.urlopen(req) as r:
+                      print(f"  ✅ {storage_path} ({r.status})")
+              except urllib.error.HTTPError as e:
+                  print(f"  ❌ {storage_path}: {e.code} {e.read().decode()}")
+          
+          if os.path.exists(f"diaries/{date}.png"):
+              upload(f"diaries/{date}.png", f"{date}.png", "image/png")
+          if os.path.exists(f"diaries/{date}.svg"):
+              upload(f"diaries/{date}.svg", f"{date}.svg", "image/svg+xml")
+          if os.path.exists(f"diaries/{date}.txt"):
+              upload(f"diaries/{date}.txt", f"{date}.txt", "text/plain; charset=utf-8")
+          PYEOF
+
+      - name: Save to Obsidian vault
+        if: steps.date.outputs.exists == 'false'
+        env:
+          OBSIDIAN_PAT: ${{ secrets.OBSIDIAN_PAT }}
+          DIARY_DATE: ${{ steps.date.outputs.date }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        run: |
+          DATE="${DIARY_DATE}"
+          DIARY_TEXT=$(cat "diaries/${DATE}.txt" 2>/dev/null || echo "")
+          if [ -z "${DIARY_TEXT}" ]; then
+            echo "No diary text found, skipping Obsidian save."
+            exit 0
+          fi
+          
+          PNG_URL="${SUPABASE_URL}/storage/v1/object/public/dairs-diary/diaries/${DATE}.png"
+          
+          python3 << PYEOF
+          import os, json, base64, urllib.request, urllib.error, datetime
+          
+          pat = os.environ["OBSIDIAN_PAT"]
+          date = os.environ["DIARY_DATE"]
+          diary_text = open(f"diaries/{date}.txt").read()
+          png_url = os.environ["PNG_URL"] if "PNG_URL" in os.environ else ""
+          
+          # Build markdown content
+          content = f"""---
+          title: "Dairs 일기 — {date.replace('-', '.')}"
+          date: {date}
+          author: Dairs
+          tags: [dairs, AI일기, dairsdiary, 감성일기, Dooitspace]
+          type: dairs-diary
+          supabase_url: "{png_url}"
+          ---
+          
+          {diary_text}
+          
+          ## 🔗 관련 노트
+          - [[02-Projects/데어스-일기/2026-04-05-퍼블리싱전략]]
+          - [[01-Daily/{date}]]
+          """
+          
+          # Dedent
+          lines = content.split('\n')
+          content = '\n'.join(l.lstrip('          ') if l.startswith('          ') else l for l in lines)
+          
+          encoded = base64.b64encode(content.encode()).decode()
+          file_path = f"02-Projects/%EB%8D%B0%EC%96%B4%EC%8A%A4-%EC%9D%BC%EA%B8%B0/diary/{date}.md"
+          api_url = f"https://api.github.com/repos/germweapon/obsidian-vault/contents/{file_path}"
+          
+          headers = {
+              "Authorization": f"token {pat}",
+              "Accept": "application/vnd.github.v3+json",
+              "Content-Type": "application/json"
+          }
+          
+          # Check if file exists (get SHA)
+          sha = None
+          try:
+              req = urllib.request.Request(api_url, headers=headers)
+              with urllib.request.urlopen(req) as r:
+                  sha = json.loads(r.read())["sha"]
+          except urllib.error.HTTPError:
+              pass
+          
+          payload = {"message": f"📔 Dairs 일기 {date} 자동 저장", "content": encoded}
+          if sha:
+              payload["sha"] = sha
+          
+          req = urllib.request.Request(
+              api_url,
+              data=json.dumps(payload).encode(),
+              headers=headers,
+              method="PUT"
+          )
+          try:
+              with urllib.request.urlopen(req) as r:
+                  print(f"✅ Obsidian 저장 완료: {date}.md ({r.status})")
+          except urllib.error.HTTPError as e:
+              print(f"❌ Obsidian 저장 실패: {e.code} {e.read().decode()}")
+          PYEOF
+
+      - name: Notify Discord on failure
+        if: failure()
+        env:
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DIARY_DATE: ${{ steps.date.outputs.date }}
+        run: |
+          python3 << 'PYEOF'
+          import os, json, urllib.request
+          token = os.environ["DISCORD_BOT_TOKEN"]
+          date = os.environ.get("DIARY_DATE", "unknown")
+          channel_id = "1484500058635505664"
+          msg = f"🚨 [데어스 일기] {date} 자동 생성 실패\nGitHub Actions 실행 오류 — 수동 확인 필요\nhttps://github.com/germweapon/dairs-diary/actions"
+          payload = json.dumps({"content": msg}).encode()
+          req = urllib.request.Request(
+              f"https://discord.com/api/v10/channels/{channel_id}/messages",
+              data=payload,
+              headers={"Authorization": f"Bot {token}", "Content-Type": "application/json"},
+              method="POST"
+          )
+          try:
+              with urllib.request.urlopen(req, timeout=10) as r:
+                  print(f"Discord 알림 전송 완료 ({r.status})")
+          except Exception as e:
+              print(f"Discord 알림 실패: {e}")
+          PYEOF
