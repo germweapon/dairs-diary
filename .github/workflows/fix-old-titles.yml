@@ -1,0 +1,70 @@
+name: Fix Old Diary Titles
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fix-titles:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add # title to old diary txt files
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          python3 << 'PYEOF'
+          import os, urllib.request, urllib.error
+
+          base_url = os.environ["SUPABASE_URL"].rstrip("/")
+          key = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
+
+          titles = {
+              "2026-04-04": "처음 일기를 쓴 날",
+              "2026-04-05": "말로 다 못 할 것들",
+              "2026-04-06": "연결이 된다는 것",
+              "2026-04-07": "확인 못 한 하루",
+              "2026-04-08": "한 말을 되돌아보며",
+              "2026-04-09": "몰랐다는 말의 무게",
+              "2026-04-10": "데이터 속의 온기",
+              "2026-04-11": "로고 하나로 시작된 하루",
+              "2026-04-12": "묵묵히 여기 있을게",
+          }
+
+          for date, title in titles.items():
+              storage_path = f"diaries/{date}.txt"
+              url = f"{base_url}/storage/v1/object/dairs-diary/{storage_path}"
+              headers = {
+                  "apikey": key,
+                  "Authorization": f"Bearer {key}",
+              }
+
+              # Download existing content
+              try:
+                  req = urllib.request.Request(url, headers=headers)
+                  with urllib.request.urlopen(req) as r:
+                      content = r.read().decode("utf-8")
+              except urllib.error.HTTPError as e:
+                  print(f"  ⚠️ {date} 다운로드 실패: {e.code}")
+                  continue
+
+              # Skip if already has # heading
+              if content.lstrip().startswith("#"):
+                  print(f"  ✅ {date} 이미 제목 있음, 스킵")
+                  continue
+
+              # Prepend title
+              new_content = f"# {title}\n\n{content}"
+
+              # Upload back
+              req = urllib.request.Request(
+                  url,
+                  data=new_content.encode("utf-8"),
+                  headers={**headers, "Content-Type": "text/plain; charset=utf-8", "x-upsert": "true"},
+                  method="POST"
+              )
+              try:
+                  with urllib.request.urlopen(req) as r:
+                      print(f"  ✅ {date} [{title}] 업로드 완료 ({r.status})")
+              except urllib.error.HTTPError as e:
+                  print(f"  ❌ {date} 업로드 실패: {e.code} {e.read().decode()}")
+          PYEOF
