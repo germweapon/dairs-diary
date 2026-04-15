@@ -159,29 +159,33 @@ jobs:
           DIARY_DATE: ${{ steps.date.outputs.date }}
         run: |
           DATE="${DIARY_DATE}"
-          echo "Converting SVG to PNG..."
-          npm install -g @resvg/resvg-cli --silent 2>/dev/null || apt-get install -q -y librsvg2-bin 2>/dev/null
-          
-          # SVG → PNG 변환 (rsvg-convert or resvg)
-          if command -v rsvg-convert &>/dev/null; then
-            rsvg-convert -w 1080 -h 1080 "diaries/${DATE}.svg" -o "diaries/${DATE}.png"
+
+          # SVG → PNG 변환 (실패해도 전체 스텝이 중단되지 않음)
+          echo "Converting SVG to PNG (optional)..."
+          if apt-get install -q -y librsvg2-bin 2>/dev/null && command -v rsvg-convert &>/dev/null; then
+            rsvg-convert -w 1080 -h 1080 "diaries/${DATE}.svg" -o "diaries/${DATE}.png" 2>/dev/null \
+              && echo "PNG converted via rsvg-convert" \
+              || echo "rsvg-convert failed, skipping PNG"
           else
-            npx @resvg/resvg-cli "diaries/${DATE}.svg" "diaries/${DATE}.png" -w 1080 -h 1080 2>/dev/null
+            echo "librsvg2-bin not available, trying resvg..."
+            npm install -g @resvg/resvg-cli 2>/dev/null \
+              && npx @resvg/resvg-cli "diaries/${DATE}.svg" "diaries/${DATE}.png" -w 1080 -h 1080 2>/dev/null \
+              && echo "PNG converted via resvg" \
+              || echo "resvg also failed — PNG upload will be skipped"
           fi
-          
+
           echo "Uploading to Supabase Storage..."
           python3 << 'PYEOF'
           import os, urllib.request, urllib.error
-          
+
           base_url = os.environ["SUPABASE_URL"].rstrip("/")
           key = os.environ["SUPABASE_ANON_KEY"]
           date = os.environ["DIARY_DATE"]
-          
+
           def upload(local_path, storage_path, content_type):
               with open(local_path, "rb") as f:
                   data = f.read()
               url = f"{base_url}/storage/v1/object/dairs-diary/diaries/{storage_path}"
-              # Try UPSERT first
               req = urllib.request.Request(
                   url, data=data,
                   headers={"apikey": key, "Authorization": f"Bearer {key}",
@@ -193,9 +197,11 @@ jobs:
                       print(f"  ✅ {storage_path} ({r.status})")
               except urllib.error.HTTPError as e:
                   print(f"  ❌ {storage_path}: {e.code} {e.read().decode()}")
-          
+
           if os.path.exists(f"diaries/{date}.png"):
               upload(f"diaries/{date}.png", f"{date}.png", "image/png")
+          else:
+              print(f"  ⚠️ {date}.png 없음 — PNG 변환 실패로 스킵")
           if os.path.exists(f"diaries/{date}.svg"):
               upload(f"diaries/{date}.svg", f"{date}.svg", "image/svg+xml")
           if os.path.exists(f"diaries/{date}.txt"):
@@ -215,17 +221,17 @@ jobs:
             echo "No diary text found, skipping Obsidian save."
             exit 0
           fi
-          
+
           PNG_URL="${SUPABASE_URL}/storage/v1/object/public/dairs-diary/diaries/${DATE}.png"
-          
+
           python3 << PYEOF
           import os, json, base64, urllib.request, urllib.error, datetime
-          
+
           pat = os.environ["OBSIDIAN_PAT"]
           date = os.environ["DIARY_DATE"]
           diary_text = open(f"diaries/{date}.txt").read()
           png_url = os.environ["PNG_URL"] if "PNG_URL" in os.environ else ""
-          
+
           # Build markdown content
           content = f"""---
           title: "Dairs 일기 — {date.replace('-', '.')}"
@@ -235,28 +241,28 @@ jobs:
           type: dairs-diary
           supabase_url: "{png_url}"
           ---
-          
+
           {diary_text}
-          
+
           ## 🔗 관련 노트
           - [[02-Projects/데어스-일기/2026-04-05-퍼블리싱전략]]
           - [[01-Daily/{date}]]
           """
-          
+
           # Dedent
           lines = content.split('\n')
           content = '\n'.join(l.lstrip('          ') if l.startswith('          ') else l for l in lines)
-          
+
           encoded = base64.b64encode(content.encode()).decode()
           file_path = f"02-Projects/%EB%8D%B0%EC%96%B4%EC%8A%A4-%EC%9D%BC%EA%B8%B0/diary/{date}.md"
           api_url = f"https://api.github.com/repos/germweapon/obsidian-vault/contents/{file_path}"
-          
+
           headers = {
               "Authorization": f"token {pat}",
               "Accept": "application/vnd.github.v3+json",
               "Content-Type": "application/json"
           }
-          
+
           # Check if file exists (get SHA)
           sha = None
           try:
@@ -265,11 +271,11 @@ jobs:
                   sha = json.loads(r.read())["sha"]
           except urllib.error.HTTPError:
               pass
-          
+
           payload = {"message": f"📔 Dairs 일기 {date} 자동 저장", "content": encoded}
           if sha:
               payload["sha"] = sha
-          
+
           req = urllib.request.Request(
               api_url,
               data=json.dumps(payload).encode(),
@@ -290,9 +296,12 @@ jobs:
           DIARY_DATE: ${{ steps.date.outputs.date }}
         run: |
           python3 << 'PYEOF'
-          import os, json, urllib.request
-          token = os.environ["DISCORD_BOT_TOKEN"]
+          import os, json, urllib.request, urllib.error
+          token = os.environ.get("DISCORD_BOT_TOKEN", "")
           date = os.environ.get("DIARY_DATE", "unknown")
+          if not token:
+              print("DISCORD_BOT_TOKEN 미설정, 알림 스킵")
+              exit(0)
           channel_id = "1484500058635505664"
           msg = f"🚨 [데어스 일기] {date} 자동 생성 실패\nGitHub Actions 실행 오류 — 수동 확인 필요\nhttps://github.com/germweapon/dairs-diary/actions"
           payload = json.dumps({"content": msg}).encode()
@@ -305,6 +314,9 @@ jobs:
           try:
               with urllib.request.urlopen(req, timeout=10) as r:
                   print(f"Discord 알림 전송 완료 ({r.status})")
+          except urllib.error.HTTPError as e:
+              # 알림 실패 자체는 CI 실패로 이어지지 않음
+              print(f"Discord 알림 실패 (무시): {e.code}")
           except Exception as e:
-              print(f"Discord 알림 실패: {e}")
+              print(f"Discord 알림 오류 (무시): {e}")
           PYEOF
