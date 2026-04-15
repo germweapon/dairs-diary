@@ -153,6 +153,7 @@ jobs:
 
       - name: Upload to Supabase Storage
         if: steps.date.outputs.exists == 'false'
+        continue-on-error: true
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
@@ -210,6 +211,7 @@ jobs:
 
       - name: Save to Obsidian vault
         if: steps.date.outputs.exists == 'false'
+        continue-on-error: true
         env:
           OBSIDIAN_PAT: ${{ secrets.OBSIDIAN_PAT }}
           DIARY_DATE: ${{ steps.date.outputs.date }}
