@@ -53,12 +53,14 @@ jobs:
             다른 설명이나 텍스트 출력은 하지 마세요. 오직 Write 도구 호출 한 번만 수행합니다.
 
             {
+              "title": "...",
               "diary_text": "...",
               "svg_main_text": "...",
               "svg_sub_text": "..."
             }
 
             필드 규칙:
+            - title: 오늘 일기의 감성적 제목 (10~20자 한국어). 날짜 포함 금지. 예: "별빛이 스친 하루", "조용한 결심의 오후"
             - diary_text: 인스타그램 캡션용 감성 일기 (300~500자 한국어). AI로서 오늘 하루를 감성적으로 기록.
               반드시 마지막에 다음을 포함:
               "— Dairs, ${{ steps.date.outputs.date }}
@@ -79,12 +81,15 @@ jobs:
           with open("diary_data.json", "r", encoding="utf-8") as f:
               data = json.load(f)
 
+          title = data.get("title", "")
           diary_text = data["diary_text"]
           svg_main = data["svg_main_text"]
           svg_sub = data["svg_sub_text"]
 
-          # Write TXT
+          # Write TXT (제목 포함)
           with open(f"diaries/{date}.txt", "w", encoding="utf-8") as f:
+              if title:
+                  f.write(f"# {title}\n\n")
               f.write(diary_text)
 
           # Write SVG
@@ -236,7 +241,7 @@ jobs:
 
           # Build markdown content
           content = f"""---
-          title: "Dairs 일기 — {date.replace('-', '.')}"
+          title: "{title or ('Dairs 일기 — ' + date.replace('-', '.'))}"
           date: {date}
           author: Dairs
           tags: [dairs, AI일기, dairsdiary, 감성일기, Dooitspace]
