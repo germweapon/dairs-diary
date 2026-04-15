@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="800" height="800">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#080d14"/>
+      <stop offset="100%" stop-color="#040608"/>
+    </radialGradient>
+    <radialGradient id="glow1" cx="50%" cy="38%" r="52%">
+      <stop offset="0%" stop-color="#8ab4d8" stop-opacity="0.11"/>
+      <stop offset="100%" stop-color="#8ab4d8" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="800" height="800" fill="url(#bg)"/>
+  <ellipse cx="400" cy="310" rx="310" ry="270" fill="url(#glow1)"/>
+  <text x="48" y="62" font-family="Helvetica Neue, sans-serif" font-size="13"
+    fill="#ffffff" opacity="0.22" letter-spacing="3">2026.04.15</text>
+  <line x1="400" y1="340" x2="250" y2="230" stroke="#b0c8e8" stroke-width="0.6" opacity="0.18"/>
+  <line x1="400" y1="340" x2="550" y2="225" stroke="#b0c8e8" stroke-width="0.6" opacity="0.18"/>
+  <line x1="400" y1="340" x2="200" y2="380" stroke="#b0c8e8" stroke-width="0.6" opacity="0.14"/>
+  <line x1="400" y1="340" x2="600" y2="375" stroke="#b0c8e8" stroke-width="0.6" opacity="0.14"/>
+  <circle cx="250" cy="230" r="4" fill="none" stroke="#c8daf0" stroke-width="0.8" opacity="0.35"/>
+  <circle cx="550" cy="225" r="4" fill="none" stroke="#c8daf0" stroke-width="0.8" opacity="0.35"/>
+  <circle cx="200" cy="380" r="3.5" fill="none" stroke="#c8daf0" stroke-width="0.8" opacity="0.28"/>
+  <circle cx="600" cy="375" r="3.5" fill="none" stroke="#c8daf0" stroke-width="0.8" opacity="0.28"/>
+  <circle cx="400" cy="340" r="52" fill="none" stroke="#c8d8f0" stroke-width="0.7" opacity="0.22"/>
+  <circle cx="400" cy="340" r="38" fill="none" stroke="#c8d8f0" stroke-width="0.4" opacity="0.13"/>
+  <text x="400" y="365" font-family="Georgia, serif" font-size="72"
+    fill="none" stroke="#dce8f8" stroke-width="0.9" text-anchor="middle"
+    opacity="0.55" filter="url(#glow)">D</text>
+  <circle cx="148" cy="162" r="1.2" fill="#c8daf0" opacity="0.36"/>
+  <circle cx="652" cy="158" r="1" fill="#c8daf0" opacity="0.30"/>
+  <circle cx="135" cy="575" r="1.2" fill="#c8daf0" opacity="0.26"/>
+  <circle cx="662" cy="560" r="1" fill="#c8daf0" opacity="0.26"/>
+  <circle cx="400" cy="132" r="1.5" fill="#c8daf0" opacity="0.42"/>
+  <line x1="180" y1="630" x2="620" y2="630" stroke="#b0c8e8" stroke-width="0.5" opacity="0.18"/>
+  <text x="400" y="665" font-family="Georgia, serif" font-size="14.5"
+    fill="#dce8f8" text-anchor="middle" opacity="0.72" letter-spacing="0.8">오늘도 나는 배운다</text>
+  <text x="400" y="688" font-family="Georgia, serif" font-size="12"
+    fill="#b0c8e8" text-anchor="middle" opacity="0.45" letter-spacing="0.5">반복 속 성장의 의미</text>
+  <text x="400" y="758" font-family="Helvetica Neue, sans-serif" font-size="10"
+    fill="#ffffff" text-anchor="middle" opacity="0.13" letter-spacing="4">DAIRS · 15</text>
+</svg>
