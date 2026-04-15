@@ -168,7 +168,7 @@ jobs:
 
           # SVG → PNG 변환 (실패해도 전체 스텝이 중단되지 않음)
           echo "Converting SVG to PNG (optional)..."
-          if apt-get install -q -y librsvg2-bin 2>/dev/null && command -v rsvg-convert &>/dev/null; then
+          if sudo apt-get install -q -y librsvg2-bin 2>/dev/null && command -v rsvg-convert &>/dev/null; then
             rsvg-convert -w 1080 -h 1080 "diaries/${DATE}.svg" -o "diaries/${DATE}.png" 2>/dev/null \
               && echo "PNG converted via rsvg-convert" \
               || echo "rsvg-convert failed, skipping PNG"
