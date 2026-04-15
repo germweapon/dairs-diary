@@ -156,7 +156,7 @@ jobs:
         continue-on-error: true
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           DIARY_DATE: ${{ steps.date.outputs.date }}
         run: |
           DATE="${DIARY_DATE}"
@@ -180,7 +180,7 @@ jobs:
           import os, urllib.request, urllib.error
 
           base_url = os.environ["SUPABASE_URL"].rstrip("/")
-          key = os.environ["SUPABASE_ANON_KEY"]
+          key = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
           date = os.environ["DIARY_DATE"]
 
           def upload(local_path, storage_path, content_type):
